@@ -28,12 +28,12 @@ jobs:
       - name: Check format
         run: scarb fmt --check
 
-  test:
+   test:
     runs-on: ubuntu-latest
     name: tests
     steps:
       - name: Checkout code
-        uses: actions/checkout@main
+        uses: actions/checkout@v3
 
       - name: Set up Scarb
         uses: software-mansion/setup-scarb@v1
@@ -46,4 +46,6 @@ jobs:
           starknet-foundry-version: "0.43.1"
 
       - name: Run tests
-        run: snforge test
+        run: |
+          cd spott_contract
+          snforge test
