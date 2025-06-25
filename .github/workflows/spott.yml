@@ -27,8 +27,7 @@ jobs:
 
       - name: Check format
         run: scarb fmt --check
-
-   test:
+  test:
     runs-on: ubuntu-latest
     name: tests
     steps:
