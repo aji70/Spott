@@ -7,8 +7,8 @@ pub mod components {
         pub mod vendor;
     }
     pub mod product {
+        pub mod MockProduct;
         pub mod interface;
-        pub mod mock;
         pub mod product;
         pub mod test;
         pub mod types;

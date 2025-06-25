@@ -4,11 +4,11 @@ use spott_contract::components::product::interface::IProduct;
 pub mod ProductComponent {
     use core::array::{Array, ArrayTrait};
     use core::num::traits::Zero;
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use spott_contract::components::product::types::{Order, Product, Review};
-    use spott_contract::interfaces::ierc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
-        Map, StorageMapReadAccess, StorageMapWriteAccess,
-        StoragePointerReadAccess, StoragePointerWriteAccess,
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address, get_contract_address};
 
@@ -18,18 +18,14 @@ pub mod ProductComponent {
     pub struct Storage {
         products: Map<u256, Product>,
         product_count: u256,
-        // Map vendor to the count of products, and map vendor+index to product_id
         vendor_product_count: Map<ContractAddress, u256>,
         vendor_products: Map<(ContractAddress, u256), u256>,
         orders: Map<u256, Order>,
         order_count: u256,
-        // Map buyer to count of orders, and map buyer+index to order_id
         buyer_order_count: Map<ContractAddress, u256>,
         buyer_orders: Map<(ContractAddress, u256), u256>,
-        // Map vendor to count of reviews, and map vendor+index to review
         vendor_review_count: Map<ContractAddress, u256>,
         vendor_reviews: Map<(ContractAddress, u256), Review>,
-        payment_token_address: ContractAddress,
     }
 
     #[event]
@@ -117,6 +113,12 @@ pub mod ProductComponent {
     impl ProductComponentImpl<
         TContractState, +HasComponent<TContractState>,
     > of super::IProduct<ComponentState<TContractState>> {
+        fn initialize(
+            ref self: ComponentState<TContractState>, payment_token_address: ContractAddress,
+        ) {
+            assert(payment_token_address.is_non_zero(), 'Invalid token address');
+        }
+
         fn add_product(
             ref self: ComponentState<TContractState>,
             title: ByteArray,
@@ -135,7 +137,6 @@ pub mod ProductComponent {
 
             self.products.write(id, product);
 
-            // Update vendor products
             let count = self.vendor_product_count.read(caller);
             self.vendor_products.write((caller, count), id);
             self.vendor_product_count.write(caller, count + 1);
@@ -205,7 +206,10 @@ pub mod ProductComponent {
         }
 
         fn place_order(
-            ref self: ComponentState<TContractState>, product_id: u256, quantity: u256,
+            ref self: ComponentState<TContractState>,
+            product_id: u256,
+            quantity: u256,
+            payment_token_address: ContractAddress,
         ) -> u256 {
             let mut product = self.products.read(product_id);
             assert(product.active, 'Product not active');
@@ -214,7 +218,7 @@ pub mod ProductComponent {
             let caller = get_caller_address();
             let total = product.price * quantity;
 
-            let token_address = self.payment_token_address.read();
+            let token_address = payment_token_address;
             assert(token_address.is_non_zero(), 'Token address not set');
             let token = IERC20Dispatcher { contract_address: token_address };
             token.transfer_from(caller, get_contract_address(), total);
@@ -279,7 +283,11 @@ pub mod ProductComponent {
             self.emit(DisputeRaised { order_id });
         }
 
-        fn release_funds(ref self: ComponentState<TContractState>, order_id: u256) {
+        fn release_funds(
+            ref self: ComponentState<TContractState>,
+            order_id: u256,
+            payment_token_address: ContractAddress,
+        ) {
             let caller = get_caller_address();
             let mut order = self.orders.read(order_id);
             let product = self.products.read(order.product_id);
@@ -291,7 +299,7 @@ pub mod ProductComponent {
             order.released = true;
             self.orders.write(order_id, order);
 
-            let token_address = self.payment_token_address.read();
+            let token_address = payment_token_address;
             let token = IERC20Dispatcher { contract_address: token_address };
             token.transfer(product.vendor, order.total);
 
@@ -323,7 +331,6 @@ pub mod ProductComponent {
                 reviewer, vendor, rating, comment, timestamp: get_block_timestamp(),
             };
 
-            // Update vendor reviews
             let count = self.vendor_review_count.read(vendor);
             self.vendor_reviews.write((vendor, count), review);
             self.vendor_review_count.write(vendor, count + 1);
@@ -344,13 +351,16 @@ pub mod ProductComponent {
             reviews_arr
         }
 
-
         fn get_review_count_by_vendor(
             self: @ComponentState<TContractState>, vendor: ContractAddress,
         ) -> u64 {
             let count: u256 = self.vendor_review_count.read(vendor);
             assert(count <= U64_MAX, 'Count exceeds u64 max');
             count.try_into().expect('Conversion failed')
+        }
+
+        fn get_product_count(self: @ComponentState<TContractState>) -> u256 {
+            self.product_count.read()
         }
     }
 }
