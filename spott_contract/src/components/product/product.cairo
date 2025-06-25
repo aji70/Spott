@@ -221,7 +221,7 @@ pub mod ProductComponent {
             let token_address = payment_token_address;
             assert(token_address.is_non_zero(), 'Token address not set');
             let token = IERC20Dispatcher { contract_address: token_address };
-            token.transfer_from(caller, get_contract_address(), total);
+            token.transfer(get_contract_address(), total);
 
             product.stock -= quantity;
             self.products.write(product_id, product);

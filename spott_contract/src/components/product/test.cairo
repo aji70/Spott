@@ -21,24 +21,24 @@ mod test {
     // }
 
     fn VENDOR() -> ContractAddress {
-    'VENDOR'.try_into().unwrap()
-}
+        'VENDOR'.try_into().unwrap()
+    }
 
     // fn BUYER() -> ContractAddress {
     //     contract_address_const::<'BUYER'>()
     // }
 
-     fn BUYER() -> ContractAddress {
-    'BUYER'.try_into().unwrap()
-}
+    fn BUYER() -> ContractAddress {
+        'BUYER'.try_into().unwrap()
+    }
 
     // fn OWNER() -> ContractAddress {
     //     contract_address_const::<'OWNER'>()
     // }
 
     fn OWNER() -> ContractAddress {
-    'OWNER'.try_into().unwrap()
-}
+        'OWNER'.try_into().unwrap()
+    }
 
 
     // Deploy MockProduct contract
@@ -162,68 +162,69 @@ mod test {
     }
 
 
-#[test]
-fn test_place_order_with_payment() {
-    let contract_address = setup();
-    let product_dispatcher = IProductDispatcher { contract_address };
-    let erc20_dispatcher = IERC20Dispatcher { contract_address };
-    let vendor = VENDOR();
-    let buyer = BUYER();
+    #[test]
+    fn test_place_order_with_payment() {
+        let contract_address = setup();
+        let product_dispatcher = IProductDispatcher { contract_address };
+        let erc20_dispatcher = IERC20Dispatcher { contract_address };
+        let vendor = VENDOR();
+        let buyer = BUYER();
 
-    // Add a product as vendor
-    start_cheat_caller_address(contract_address, vendor);
-    let product_id = product_dispatcher
-        .add_product(
-            title: "Test Product",
-            price: 300,
-            stock: 25,
-            video_url: "https://example.com/video",
-            metadata_uri: "https://example.com/metadata",
-        );
-    stop_cheat_caller_address(contract_address);
+        // Add a product as vendor
+        start_cheat_caller_address(contract_address, vendor);
+        let product_id = product_dispatcher
+            .add_product(
+                title: "Test Product",
+                price: 300,
+                stock: 25,
+                video_url: "https://example.com/video",
+                metadata_uri: "https://example.com/metadata",
+            );
+        stop_cheat_caller_address(contract_address);
 
-    // Check buyer balance before order
-    let buyer_balance_before = erc20_dispatcher.balance_of(buyer);
-    assert(buyer_balance_before >= 600, 'insufficient buyer balance');
+        // Check buyer balance before order
+        let buyer_balance_before = erc20_dispatcher.balance_of(buyer);
+        assert(buyer_balance_before >= 600, 'insufficient buyer balance');
 
-    // The key fix: approve from buyer's perspective, not from contract's perspective
-    // We need to cheat the caller address to be the buyer BEFORE calling approve
-    start_cheat_caller_address(contract_address, buyer);
-    let allowance_before = erc20_dispatcher.allowance(buyer, contract_address);
-    println!("Allowance before: {}", allowance_before);
+        // The key fix: approve from buyer's perspective, not from contract's perspective
+        // We need to cheat the caller address to be the buyer BEFORE calling approve
+        start_cheat_caller_address(contract_address, buyer);
+        let allowance_before = erc20_dispatcher.allowance(buyer, contract_address);
+        println!("Allowance before: {}", allowance_before);
 
-    // Approve the contract to spend buyer's tokens
-    erc20_dispatcher.approve(contract_address, 600);
-    
-    // Verify approval worked
-    let allowance_after = erc20_dispatcher.allowance(buyer, contract_address);
-    println!("Allowance after: {}", allowance_after);
-    assert(allowance_after >= 600, 'approval failed');
+        // Approve the contract to spend buyer's tokens
+        erc20_dispatcher.approve(contract_address, 600);
 
-    // Place order as buyer (still as buyer)
-    let order_id = product_dispatcher.place_order(product_id, 2, contract_address);
-    stop_cheat_caller_address(contract_address);
+        // Verify approval worked
+        let allowance_after = erc20_dispatcher.allowance(buyer, contract_address);
+        println!("Allowance after: {}", allowance_after);
+        assert(allowance_after >= 600, 'approval failed');
 
-    assert(order_id == 1, 'order_id should be 1');
+        // Place order as buyer (still as buyer)
+        let order_id = product_dispatcher.place_order(product_id, 2, contract_address);
+        stop_cheat_caller_address(contract_address);
 
-    // Verify payment was transferred
-    let buyer_balance_after = erc20_dispatcher.balance_of(buyer);
-    let contract_balance = erc20_dispatcher.balance_of(contract_address);
+        assert(order_id == 1, 'order_id should be 1');
 
-    assert(buyer_balance_after == buyer_balance_before - 600, 'payment not deducted');
-    assert(contract_balance == 600, 'payment not received');
+        // Verify payment was transferred
+        let buyer_balance_after = erc20_dispatcher.balance_of(buyer);
+        let contract_balance = erc20_dispatcher.balance_of(contract_address);
 
-    // Verify order details
-    let order = product_dispatcher.get_order(order_id);
-    assert(order.buyer == buyer, 'order buyer mismatch');
-    assert(order.product_id == product_id, 'order product_id mismatch');
-    assert(order.quantity == 2, 'order quantity mismatch');
-    assert(order.total == 600, 'order total mismatch');
-    assert(!order.shipped, 'order should not be shipped');
-    assert(!order.delivered, 'order should not be delivered');
+        assert(buyer_balance_after == buyer_balance_before - 600, 'payment not deducted');
+        assert(contract_balance == 600, 'payment not received');
 
-    // Verify stock was reduced
-    let product = product_dispatcher.get_product(product_id);
-    assert(product.stock == 23, 'stock should be reduced');
+        // Verify order details
+        let order = product_dispatcher.get_order(order_id);
+        assert(order.buyer == buyer, 'order buyer mismatch');
+        assert(order.product_id == product_id, 'order product_id mismatch');
+        assert(order.quantity == 2, 'order quantity mismatch');
+        assert(order.total == 600, 'order total mismatch');
+        assert(!order.shipped, 'order should not be shipped');
+        assert(!order.delivered, 'order should not be delivered');
+
+        // Verify stock was reduced
+        let product = product_dispatcher.get_product(product_id);
+        assert(product.stock == 23, 'stock should be reduced');
+    }
 }
 
