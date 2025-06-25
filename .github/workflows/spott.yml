@@ -25,8 +25,11 @@ jobs:
           curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh
           echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
-      - name: Check format
-        run: scarb fmt --check
+      - name: Check format 
+
+        run: |
+         cd spott_contract
+         scarb fmt --check
   test:
     runs-on: ubuntu-latest
     name: tests
