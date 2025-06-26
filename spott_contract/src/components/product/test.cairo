@@ -598,8 +598,8 @@ mod test {
     //     println!("Contract balance before release: {}", contract_balance_before);
     //     println!("Buyer balance before release: {}", buyer_balance_before);
 
-    //     // Release funds (vendor) - FIX: Add contract_address parameter like in test_release_funds
-    //     start_cheat_caller_address(contract_address, vendor);
+    //     // Release funds (vendor) - FIX: Add contract_address parameter like in
+    //     test_release_funds start_cheat_caller_address(contract_address, vendor);
     //     product_dispatcher.release_funds(order_id, contract_address);
     //     stop_cheat_caller_address(contract_address);
 
