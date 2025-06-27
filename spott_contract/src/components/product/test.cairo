@@ -20,7 +20,6 @@ mod test {
         'VENDOR'.try_into().unwrap()
     }
 
-
     fn BUYER() -> ContractAddress {
         'BUYER'.try_into().unwrap()
     }
@@ -148,6 +147,39 @@ mod test {
         assert(product_dispatcher.get_product_count() == 1, 'product count should be 1');
     }
 
+    #[test]
+    fn test_activate_and_deactivate_product() {
+        let contract_address = setup();
+        let product_dispatcher = IProductDispatcher { contract_address };
+        let vendor = VENDOR();
+
+        // Add product
+        start_cheat_caller_address(contract_address, vendor);
+        let product_id = product_dispatcher
+            .add_product(
+                title: "Activation Product",
+                price: 100,
+                stock: 10,
+                video_url: "https://example.com/video",
+                metadata_uri: "https://example.com/metadata",
+            );
+
+        // Verify product is active by default
+        let product = product_dispatcher.get_product(product_id);
+        assert(product.active, 'product should be active');
+
+        // Deactivate product
+        product_dispatcher.deactivate_product(product_id);
+        let product = product_dispatcher.get_product(product_id);
+        assert(!product.active, 'product should be deactivated');
+
+        // Reactivate product
+        product_dispatcher.activate_product(product_id);
+        let product = product_dispatcher.get_product(product_id);
+        assert(product.active, 'product should be reactivated');
+
+        stop_cheat_caller_address(contract_address);
+    }
 
     #[test]
     fn test_place_order_with_payment() {
@@ -212,102 +244,6 @@ mod test {
         assert(product.stock == 23, 'stock should be reduced');
     }
 
-    #[test]
-    fn test_get_reviews_by_vendor() {
-        let contract_address = setup();
-        let product_dispatcher = IProductDispatcher { contract_address };
-        let erc20_dispatcher = IERC20Dispatcher { contract_address };
-        let vendor = VENDOR();
-        let buyer = BUYER();
-
-        // Add product
-        start_cheat_caller_address(contract_address, vendor);
-        let product_id = product_dispatcher
-            .add_product(
-                title: "Multi Review Product",
-                price: 100,
-                stock: 10,
-                video_url: "https://example.com/video",
-                metadata_uri: "https://example.com/metadata",
-            );
-        stop_cheat_caller_address(contract_address);
-
-        // First order and review
-        start_cheat_caller_address(contract_address, buyer);
-        erc20_dispatcher.approve(contract_address, 200); // Approve enough for both orders
-        let order_id1 = product_dispatcher.place_order(product_id, 1, contract_address);
-        stop_cheat_caller_address(contract_address);
-
-        start_cheat_caller_address(contract_address, vendor);
-        product_dispatcher.mark_as_shipped(order_id1);
-        stop_cheat_caller_address(contract_address);
-
-        start_cheat_caller_address(contract_address, buyer);
-        product_dispatcher.confirm_delivery(order_id1);
-        product_dispatcher.submit_review(order_id1, 5, "Excellent product!");
-        stop_cheat_caller_address(contract_address);
-
-        // Second order and review - buyer is still in the same cheat session
-        start_cheat_caller_address(contract_address, buyer);
-        let order_id2 = product_dispatcher.place_order(product_id, 1, contract_address);
-        stop_cheat_caller_address(contract_address);
-
-        start_cheat_caller_address(contract_address, vendor);
-        product_dispatcher.mark_as_shipped(order_id2);
-        stop_cheat_caller_address(contract_address);
-
-        start_cheat_caller_address(contract_address, buyer);
-        product_dispatcher.confirm_delivery(order_id2);
-        product_dispatcher.submit_review(order_id2, 4, "Good product!");
-        stop_cheat_caller_address(contract_address);
-
-        // Verify reviews
-        let reviews = product_dispatcher.get_reviews_by_vendor(vendor);
-        assert(reviews.len() == 2, 'should have 2 reviews');
-        assert(
-            product_dispatcher.get_review_count_by_vendor(vendor) == 2, 'review count should be 2',
-        );
-
-        let review1 = reviews.at(0);
-        let review2 = reviews.at(1);
-        assert(*review1.rating == 5, 'first review rating mismatch');
-        assert(*review2.rating == 4, 'second review rating mismatch');
-    }
-
-
-    #[test]
-    fn test_activate_and_deactivate_product() {
-        let contract_address = setup();
-        let product_dispatcher = IProductDispatcher { contract_address };
-        let vendor = VENDOR();
-
-        // Add product
-        start_cheat_caller_address(contract_address, vendor);
-        let product_id = product_dispatcher
-            .add_product(
-                title: "Activation Product",
-                price: 100,
-                stock: 10,
-                video_url: "https://example.com/video",
-                metadata_uri: "https://example.com/metadata",
-            );
-
-        // Verify product is active by default
-        let product = product_dispatcher.get_product(product_id);
-        assert(product.active, 'product should be active');
-
-        // Deactivate product
-        product_dispatcher.deactivate_product(product_id);
-        let product = product_dispatcher.get_product(product_id);
-        assert(!product.active, 'product should be deactivated');
-
-        // Reactivate product
-        product_dispatcher.activate_product(product_id);
-        let product = product_dispatcher.get_product(product_id);
-        assert(product.active, 'product should be reactivated');
-
-        stop_cheat_caller_address(contract_address);
-    }
 
     #[test]
     fn test_mark_as_shipped() {
@@ -434,58 +370,59 @@ mod test {
     }
 
 
-    // #[test]
-    // fn test_release_funds() {
-    //     let contract_address = setup();
-    //     let product_dispatcher = IProductDispatcher { contract_address };
-    //     let erc20_dispatcher = IERC20Dispatcher { contract_address };
-    //     let vendor = VENDOR();
-    //     let buyer = BUYER();
+    #[test]
+    fn test_release_funds() {
+        let contract_address = setup();
+        let product_dispatcher = IProductDispatcher { contract_address };
+        let erc20_dispatcher = IERC20Dispatcher { contract_address };
+        let vendor = VENDOR();
+        let buyer = BUYER();
+        let _ = OWNER();
 
-    //     // Complete order up to confirmation
-    //     start_cheat_caller_address(contract_address, vendor);
-    //     let product_id = product_dispatcher
-    //         .add_product(
-    //             title: "Funds Product",
-    //             price: 250,
-    //             stock: 5,
-    //             video_url: "https://example.com/video",
-    //             metadata_uri: "https://example.com/metadata",
-    //         );
-    //     stop_cheat_caller_address(contract_address);
+        // Complete order up to confirmation
+        start_cheat_caller_address(contract_address, vendor);
+        let product_id = product_dispatcher
+            .add_product(
+                title: "Funds Product",
+                price: 250,
+                stock: 5,
+                video_url: "https://example.com/video",
+                metadata_uri: "https://example.com/metadata",
+            );
+        stop_cheat_caller_address(contract_address);
 
-    //     start_cheat_caller_address(contract_address, buyer);
-    //     erc20_dispatcher.approve(contract_address, 250);
-    //     let order_id = product_dispatcher.place_order(product_id, 1, contract_address);
-    //     stop_cheat_caller_address(contract_address);
+        start_cheat_caller_address(contract_address, buyer);
+        erc20_dispatcher.approve(contract_address, 250);
+        let order_id = product_dispatcher.place_order(product_id, 1, contract_address);
+        stop_cheat_caller_address(contract_address);
 
-    //     start_cheat_caller_address(contract_address, vendor);
-    //     product_dispatcher.mark_as_shipped(order_id);
-    //     stop_cheat_caller_address(contract_address);
+        start_cheat_caller_address(contract_address, vendor);
+        product_dispatcher.mark_as_shipped(order_id);
+        stop_cheat_caller_address(contract_address);
 
-    //     start_cheat_caller_address(contract_address, buyer);
-    //     product_dispatcher.confirm_delivery(order_id);
-    //     stop_cheat_caller_address(contract_address);
+        start_cheat_caller_address(contract_address, buyer);
+        product_dispatcher.confirm_delivery(order_id);
+        stop_cheat_caller_address(contract_address);
 
-    //     // Check vendor balance before funds release
-    //     let vendor_balance_before = erc20_dispatcher.balance_of(vendor);
-    //     let order = product_dispatcher.get_order(order_id);
-    //     assert(!order.released, 'funds released earlier');
+        // Check vendor balance before funds release
+        let vendor_balance_before = erc20_dispatcher.balance_of(vendor);
+        let order = product_dispatcher.get_order(order_id);
+        assert(!order.released, 'funds released earlier');
 
-    //     // Release funds
-    //     start_cheat_caller_address(contract_address, vendor);
-    //     product_dispatcher.release_funds(order_id, contract_address);
-    //     stop_cheat_caller_address(contract_address);
+        // Release funds
+        start_cheat_caller_address(contract_address, vendor);
+        product_dispatcher.release_funds(order_id, contract_address);
+        stop_cheat_caller_address(contract_address);
 
-    //     // Verify funds were released
-    //     let vendor_balance_after = erc20_dispatcher.balance_of(vendor);
-    //     let order = product_dispatcher.get_order(order_id);
+        // Verify funds were released
+        let vendor_balance_after = erc20_dispatcher.balance_of(vendor);
+        let order = product_dispatcher.get_order(order_id);
 
-    //     assert(order.released, 'funds should be released');
-    //     assert(
-    //         vendor_balance_after == vendor_balance_before + 250, 'vendor should receive payment',
-    //     );
-    // }
+        assert(order.released, 'funds should be released');
+        assert(
+            vendor_balance_after == vendor_balance_before + 250, 'vendor should receive payment',
+        );
+    }
 
     #[test]
     fn test_submit_review() {
@@ -533,96 +470,139 @@ mod test {
         assert(product_dispatcher.get_review_count_by_vendor(vendor) == 1, 'review count mismatch');
     }
 
-    // #[test]
-    // fn test_full_order_lifecycle() {
-    //     let contract_address = setup();
-    //     let product_dispatcher = IProductDispatcher { contract_address };
-    //     let erc20_dispatcher = IERC20Dispatcher { contract_address };
-    //     let vendor = VENDOR();
-    //     let buyer = BUYER();
+    #[test]
+    fn test_get_reviews_by_vendor() {
+        let contract_address = setup();
+        let product_dispatcher = IProductDispatcher { contract_address };
+        let erc20_dispatcher = IERC20Dispatcher { contract_address };
+        let vendor = VENDOR();
+        let buyer = BUYER();
 
-    //     // Add product
-    //     start_cheat_caller_address(contract_address, vendor);
-    //     let product_id = product_dispatcher
-    //         .add_product(
-    //             title: "Lifecycle Product",
-    //             price: 100,
-    //             stock: 10,
-    //             video_url: "https://example.com/video",
-    //             metadata_uri: "https://example.com/metadata",
-    //         );
-    //     stop_cheat_caller_address(contract_address);
+        // Add product
+        start_cheat_caller_address(contract_address, vendor);
+        let product_id = product_dispatcher
+            .add_product(
+                title: "Multi Review Product",
+                price: 100,
+                stock: 10,
+                video_url: "https://example.com/video",
+                metadata_uri: "https://example.com/metadata",
+            );
+        stop_cheat_caller_address(contract_address);
 
-    //     // Approve and place order
-    //     start_cheat_caller_address(contract_address, buyer);
-    //     erc20_dispatcher.approve(contract_address, 200);
-    //     let order_id = product_dispatcher.place_order(product_id, 2, contract_address);
-    //     stop_cheat_caller_address(contract_address);
+        // First order and review
+        start_cheat_caller_address(contract_address, buyer);
+        erc20_dispatcher.approve(contract_address, 200); // Approve enough for both orders
+        let order_id1 = product_dispatcher.place_order(product_id, 1, contract_address);
+        stop_cheat_caller_address(contract_address);
 
-    //     // Verify order was placed
-    //     let order = product_dispatcher.get_order(order_id);
-    //     assert(order.buyer == buyer, 'order buyer mismatch');
-    //     assert(order.product_id == product_id, 'order product_id mismatch');
-    //     assert(order.quantity == 2, 'order quantity mismatch');
-    //     assert(order.total == 200, 'order total mismatch');
-    //     assert(!order.shipped, 'order should not be shipped');
-    //     assert(!order.delivered, 'order should not be delivered');
-    //     assert(!order.confirmed, 'order should not be confirmed');
-    //     assert(!order.released, 'funds should not be released');
+        start_cheat_caller_address(contract_address, vendor);
+        product_dispatcher.mark_as_shipped(order_id1);
+        stop_cheat_caller_address(contract_address);
 
-    //     // Mark as shipped (vendor)
-    //     start_cheat_caller_address(contract_address, vendor);
-    //     product_dispatcher.mark_as_shipped(order_id);
-    //     stop_cheat_caller_address(contract_address);
+        start_cheat_caller_address(contract_address, buyer);
+        product_dispatcher.confirm_delivery(order_id1);
+        product_dispatcher.submit_review(order_id1, 5, "Excellent product!");
+        stop_cheat_caller_address(contract_address);
 
-    //     let order = product_dispatcher.get_order(order_id);
-    //     assert(order.shipped, 'order should be shipped');
-    //     assert(!order.delivered, 'order was delivered earlier');
+        // Second order and review - buyer is still in the same cheat session
+        start_cheat_caller_address(contract_address, buyer);
+        let order_id2 = product_dispatcher.place_order(product_id, 1, contract_address);
+        stop_cheat_caller_address(contract_address);
 
-    //     // Confirm delivery (buyer)
-    //     start_cheat_caller_address(contract_address, buyer);
-    //     product_dispatcher.confirm_delivery(order_id);
-    //     stop_cheat_caller_address(contract_address);
+        start_cheat_caller_address(contract_address, vendor);
+        product_dispatcher.mark_as_shipped(order_id2);
+        stop_cheat_caller_address(contract_address);
 
-    //     let order = product_dispatcher.get_order(order_id);
-    //     assert(order.delivered, 'order should be delivered');
-    //     assert(order.confirmed, 'order should be confirmed');
-    //     assert(!order.released, 'funds were released earlier');
+        start_cheat_caller_address(contract_address, buyer);
+        product_dispatcher.confirm_delivery(order_id2);
+        product_dispatcher.submit_review(order_id2, 4, "Good product!");
+        stop_cheat_caller_address(contract_address);
 
-    //     // Debug: Check balances before release
-    //     let vendor_balance_before = erc20_dispatcher.balance_of(vendor);
-    //     let contract_balance_before = erc20_dispatcher.balance_of(contract_address);
-    //     let buyer_balance_before = erc20_dispatcher.balance_of(buyer);
+        // Verify reviews
+        let reviews = product_dispatcher.get_reviews_by_vendor(vendor);
+        assert(reviews.len() == 2, 'should have 2 reviews');
+        assert(
+            product_dispatcher.get_review_count_by_vendor(vendor) == 2, 'review count should be 2',
+        );
 
-    //     println!("Vendor balance before release: {}", vendor_balance_before);
-    //     println!("Contract balance before release: {}", contract_balance_before);
-    //     println!("Buyer balance before release: {}", buyer_balance_before);
+        let review1 = reviews.at(0);
+        let review2 = reviews.at(1);
+        assert(*review1.rating == 5, 'first review rating mismatch');
+        assert(*review2.rating == 4, 'second review rating mismatch');
+    }
 
-    //     // Release funds (vendor) - FIX: Add contract_address parameter like in
-    //     test_release_funds start_cheat_caller_address(contract_address, vendor);
-    //     product_dispatcher.release_funds(order_id, contract_address);
-    //     stop_cheat_caller_address(contract_address);
+    #[test]
+    fn test_full_order_lifecycle() {
+        let contract_address = setup();
+        let product_dispatcher = IProductDispatcher { contract_address };
+        let erc20_dispatcher = IERC20Dispatcher { contract_address };
+        let vendor = VENDOR();
+        let buyer = BUYER();
 
-    //     // Debug: Check balances after release
-    //     let vendor_balance_after = erc20_dispatcher.balance_of(vendor);
-    //     let contract_balance_after = erc20_dispatcher.balance_of(contract_address);
-    //     let buyer_balance_after = erc20_dispatcher.balance_of(buyer);
+        // Add product
+        start_cheat_caller_address(contract_address, vendor);
+        let product_id = product_dispatcher
+            .add_product(
+                title: "Lifecycle Product",
+                price: 100,
+                stock: 10,
+                video_url: "https://example.com/video",
+                metadata_uri: "https://example.com/metadata",
+            );
+        stop_cheat_caller_address(contract_address);
 
-    //     println!("Vendor balance after release: {}", vendor_balance_after);
-    //     println!("Contract balance after release: {}", contract_balance_after);
-    //     println!("Buyer balance after release: {}", buyer_balance_after);
+        // Approve and place order
+        start_cheat_caller_address(contract_address, buyer);
+        erc20_dispatcher.approve(contract_address, 200);
+        let order_id = product_dispatcher.place_order(product_id, 2, contract_address);
+        stop_cheat_caller_address(contract_address);
 
-    //     let order = product_dispatcher.get_order(order_id);
-    //     assert(order.released, 'funds should be released');
+        // Verify order was placed
+        let order = product_dispatcher.get_order(order_id);
+        assert(order.buyer == buyer, 'order buyer mismatch');
+        assert(order.product_id == product_id, 'order product_id mismatch');
+        assert(order.quantity == 2, 'order quantity mismatch');
+        assert(order.total == 200, 'order total mismatch');
+        assert(!order.shipped, 'order should not be shipped');
+        assert(!order.delivered, 'order should not be delivered');
+        assert(!order.confirmed, 'order should not be confirmed');
+        assert(!order.released, 'funds should not be released');
 
-    //     // Debug the actual calculation
-    //     let expected_vendor_balance = vendor_balance_before + 200;
-    //     println!("Expected vendor balance: {}", expected_vendor_balance);
-    //     println!("Actual vendor balance: {}", vendor_balance_after);
-    //     println!("Difference: {}", vendor_balance_after - vendor_balance_before);
+        // Mark as shipped (vendor)
+        start_cheat_caller_address(contract_address, vendor);
+        product_dispatcher.mark_as_shipped(order_id);
+        stop_cheat_caller_address(contract_address);
 
-    //     assert(vendor_balance_after == 200, 'vendor should receive payment');
-    // }
+        let order = product_dispatcher.get_order(order_id);
+        assert(order.shipped, 'order should be shipped');
+        assert(!order.delivered, 'order was delivered earlier');
+
+        // Confirm delivery (buyer)
+        start_cheat_caller_address(contract_address, buyer);
+        product_dispatcher.confirm_delivery(order_id);
+        stop_cheat_caller_address(contract_address);
+
+        let order = product_dispatcher.get_order(order_id);
+        assert(order.delivered, 'order should be delivered');
+        assert(order.confirmed, 'order should be confirmed');
+        assert(!order.released, 'funds were released earlier');
+
+        let vendor_balance_before = erc20_dispatcher.balance_of(vendor);
+        // Release funds (vendor)
+        start_cheat_caller_address(contract_address, vendor);
+        product_dispatcher.release_funds(order_id, contract_address);
+        stop_cheat_caller_address(contract_address);
+
+        let vendor_balance_after = erc20_dispatcher.balance_of(vendor);
+
+        let order = product_dispatcher.get_order(order_id);
+        assert(order.released, 'funds should be released');
+
+        assert(
+            vendor_balance_after == vendor_balance_before + 200, 'vendor should receive payment',
+        );
+    }
 
     #[test]
     fn test_full_product_management() {

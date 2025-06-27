@@ -5,6 +5,9 @@ pub mod ProductComponent {
     use core::array::{Array, ArrayTrait};
     use core::num::traits::Zero;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use spott_contract::components::product::MockProduct::{
+        IExternalDispatcher, IExternalDispatcherTrait,
+    };
     use spott_contract::components::product::types::{Order, Product, Review};
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
@@ -299,9 +302,11 @@ pub mod ProductComponent {
             order.released = true;
             self.orders.write(order_id, order);
 
-            let token_address = payment_token_address;
-            let token = IERC20Dispatcher { contract_address: token_address };
-            token.transfer(product.vendor, order.total);
+            let contract_address = get_contract_address();
+
+            // Use the internal transfer helper for same-contract transfers
+            let external_dispatcher = IExternalDispatcher { contract_address };
+            external_dispatcher.internal_transfer(product.vendor, order.total);
 
             self.emit(FundsReleased { order_id });
         }
