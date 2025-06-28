@@ -4,6 +4,7 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IExternal<ContractState> {
     fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256);
+    fn internal_transfer(ref self: ContractState, to: ContractAddress, amount: u256) -> bool;
 }
 #[starknet::contract]
 pub mod MockProduct {
@@ -45,6 +46,8 @@ pub mod MockProduct {
         self.erc20.initializer(format!("USDC"), format!("USDC"));
         self.ownable.initializer(owner);
         self.custom_decimals.write(8);
+        // Initialize the product component with the contract's own address as payment token
+        self.product.initialize(starknet::get_contract_address());
     }
 
     #[abi(embed_v0)]
@@ -77,6 +80,13 @@ pub mod MockProduct {
     impl ExternalImpl of super::IExternal<ContractState> {
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
             self.erc20.mint(recipient, amount);
+        }
+        fn internal_transfer(ref self: ContractState, to: ContractAddress, amount: u256) -> bool {
+            // Used the ERC20 internal implementation to transfer from contract's balance to
+            // recipient
+            let contract_address = starknet::get_contract_address();
+            self.erc20._transfer(contract_address, to, amount);
+            true
         }
     }
 }
