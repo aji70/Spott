@@ -1,3 +1,10 @@
+
+
+
+![B08C601A-0980-4AD4-9BED-1C1813F68D00](https://github.com/user-attachments/assets/be03f949-0d01-4459-9026-022e966d358e)
+
+
+
 # 🌍 Map-Based Live Commerce Platform
 
 ### Reimagining the Future of Local Commerce through Live Video, Maps, and Verified Trust.
