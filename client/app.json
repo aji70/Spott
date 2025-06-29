@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "SPOTT",
+    "slug": "SPOTT",
+    "version": "1.0.0",
+    "scheme": "SPOTT",
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-dev-launcher",
+        {
+          "launchMode": "most-recent"
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true
+    },
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#040405"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.josephweb3.SPOTT"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#040405"
+      },
+      "package": "com.josephweb3.SPOTT"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d9eef45d-ab5c-4b91-85cb-1119270109d6"
+      }
+    }
+  }
+}
