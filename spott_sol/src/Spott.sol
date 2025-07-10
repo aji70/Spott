@@ -12,7 +12,6 @@ contract Spott is AccessControl {
         _grantRole(MODERATOR_ROLE, moderator);
         _grantRole(DEFAULT_ADMIN_ROLE, moderator);
     }
-
     struct Product {
         uint256 id;
         address vendor;
@@ -245,3 +244,5 @@ contract Spott is AccessControl {
         return moderator;
     }
 }
+
+// 0xEc38bc9Be954b1b95501167A443b5cc81E6e3975
