@@ -1,4 +1,4 @@
-package com.josephweb3.SPOTT
+package com.josephweb3.spott
 
 import android.app.Application
 import android.content.res.Configuration

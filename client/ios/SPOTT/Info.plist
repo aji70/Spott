@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>SPOTT</string>
+    <string>spott</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -27,8 +27,8 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>SPOTT</string>
-          <string>com.josephweb3.SPOTT</string>
+          <string>spott</string>
+          <string>com.josephweb3.spott</string>
         </array>
       </dict>
       <dict>
@@ -78,7 +78,7 @@
       <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UIUserInterfaceStyle</key>
-    <string>Dark</string>
+    <string>Light</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
   </dict>
