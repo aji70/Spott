@@ -103,7 +103,7 @@ Think:
 | **Identity & KYC** | Sumsub / Stripe Identity |
 | **Delivery APIs** | Uber Direct, Easyship, or local integrations |
 | **Analytics** | Mixpanel / Amplitude / custom dashboards |
-
+| **contract Address = 0xEc38bc9Be954b1b95501167A443b5cc81E6e3975**
 ---
 
 ## 🌍 Impact on Commerce
